@@ -79,7 +79,7 @@ Useful endpoints:
 | `http://localhost:3000/admin/login` | Admin UI: `admin@plantbasedpizza.com` / `AdminAccount!23` |
 | `:8090` | Temporal UI |
 | `:16686` | Jaeger |
-| `:27017` | Mongo |
+| `mongodb://localhost:27018` | Mongo, for Compass/Rider/mongosh. No auth. Databases `PlantBasedPizza` and `PlantBasedPizza-Accounts` |
 
 ## Run (human path)
 
@@ -112,6 +112,13 @@ Neither is installed here, and the gotchas below still apply. Use `stack.sh up`,
   talks to the sidecar on `localhost:5101` through the shared network namespace.
 - **Menu cards sit below a full-height hero.** A viewport screenshot of `/` shows only
   "Italian Pizza. Plant Based. Simple.", so `01-menu.png` is taken full-page.
+- **`localhost:27017` may be a different MongoDB.** On the authoring machine, a native Windows
+  `mongod` also binds `127.0.0.1:27017` and wins for localhost clients, which then show the wrong
+  databases. `infra.override.yml` also publishes the stack's Mongo on **27018**; use that from the host.
+  Containers are unaffected, because they use `mongodb:27017`.
+- **Mongo data survives a recreate (`up` after a config change) but not `down`.** The data lives in
+  an anonymous volume. Compose carries it over when it recreates a container, but a new container
+  after `down` gets a fresh, empty volume. Recipes and the admin account are seeded again at startup.
 - **"Payment taken for 0!"** in the order history is what the app actually prints, even for a
   4.99 order. That's existing behaviour, not a harness bug.
 
