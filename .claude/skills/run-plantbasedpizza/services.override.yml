@@ -1,0 +1,6 @@
+# CRA dev server detects the WSL kernel inside the podman VM and tries to spawn
+# /mnt/c/.../powershell.exe to open a browser -> ENOENT -> container exits.
+services:
+  frontend:
+    environment:
+      - BROWSER=none

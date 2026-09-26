@@ -1,0 +1,5 @@
+# postgres:latest is v18, which refuses to start with the repo's /var/lib/postgresql/data
+# volume layout -> Temporal never comes up -> orders-worker crashes. Pin to 17.
+services:
+  postgresql:
+    image: postgres:17

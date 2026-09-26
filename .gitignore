@@ -1,0 +1,22 @@
+# .NET build output
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+TestResults/
+
+# IDEs
+.idea/
+.vs/
+.vscode/
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local env / secrets
+.env
+*.local.json
