@@ -6,6 +6,7 @@ namespace PlantBasedPizza.Kitchen.Core.Entities
         PREPARING,
         BAKING,
         QUALITYCHECK,
-        DONE
+        DONE,
+        CANCELLED
     }
 }

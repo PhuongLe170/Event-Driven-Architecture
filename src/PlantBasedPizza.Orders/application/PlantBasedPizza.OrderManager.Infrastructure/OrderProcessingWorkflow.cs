@@ -1,6 +1,7 @@
 using PlantBasedPizza.OrderManager.Core.Entities;
 using PlantBasedPizza.OrderManager.Core.Services;
 using Temporalio.Common;
+using Temporalio.Exceptions;
 using Temporalio.Workflows;
 
 namespace PlantBasedPizza.OrderManager.Infrastructure;
@@ -21,6 +22,7 @@ public class OrderProcessingWorkflow : IOrderWorkflow
     private bool _orderPaidFor;
     private decimal _paymentAmount;
     private bool _orderCancelled;
+    private bool _cancellationInProgress;
     private bool _kitchenCompletedOrder;
     private bool _orderCollected;
     private bool _orderDelivered;
@@ -33,7 +35,7 @@ public class OrderProcessingWorkflow : IOrderWorkflow
 
         await WaitForPotentialCancellation();
 
-        if (_orderCancelled)
+        if (await IsCancelled())
         {
             await ProcessCancellation();
             return _currentStatus;
@@ -43,7 +45,7 @@ public class OrderProcessingWorkflow : IOrderWorkflow
 
         await TakePayment();
 
-        if (_orderCancelled)
+        if (await IsCancelled())
         {
             await ProcessCancellation();
             return _currentStatus;
@@ -53,7 +55,14 @@ public class OrderProcessingWorkflow : IOrderWorkflow
 
         _currentStatus = OrderStatus.Confirmed;
 
+        // The order can still be cancelled (and refunded) until the kitchen starts preparing it.
         await WaitForKitchen();
+
+        if (await IsCancelled())
+        {
+            await ProcessCancellation();
+            return _currentStatus;
+        }
 
         if (order.OrderType == OrderType.Delivery)
             await WaitForDelivery();
@@ -75,17 +84,32 @@ public class OrderProcessingWorkflow : IOrderWorkflow
     [WorkflowSignal]
     public async Task CancelOrder()
     {
-        _orderCancelled = true;
-        await Workflow.ExecuteActivityAsync(
-            (OrderActivities act) => act.CancelOrder(_currentOrder!.OrderIdentifier),
-            new ActivityOptions
-            {
-                ScheduleToCloseTimeout = TimeSpan.FromSeconds(30), RetryPolicy = new RetryPolicy
+        if (_orderCancelled || _cancellationInProgress) return;
+
+        // The activity checks the order in the database: the cancellation is rejected once the kitchen has started.
+        _cancellationInProgress = true;
+        try
+        {
+            _orderCancelled = await Workflow.ExecuteActivityAsync(
+                (OrderActivities act) => act.CancelOrder(_currentOrder!.OrderIdentifier),
+                new ActivityOptions
                 {
-                    MaximumAttempts = 3,
-                    BackoffCoefficient = 2
-                }
-            });
+                    ScheduleToCloseTimeout = TimeSpan.FromSeconds(30), RetryPolicy = new RetryPolicy
+                    {
+                        MaximumAttempts = 3,
+                        BackoffCoefficient = 2
+                    }
+                });
+        }
+        catch (ActivityFailureException)
+        {
+            // Cancellation could not be processed, carry on with the order.
+            _orderCancelled = false;
+        }
+        finally
+        {
+            _cancellationInProgress = false;
+        }
     }
 
     [WorkflowSignal]
@@ -143,7 +167,14 @@ public class OrderProcessingWorkflow : IOrderWorkflow
 
     public async Task WaitForKitchen()
     {
-        while (!_kitchenCompletedOrder) await Workflow.DelayAsync(TimeSpan.FromSeconds(30));
+        await Workflow.WaitConditionAsync(() => _kitchenCompletedOrder || _orderCancelled);
+    }
+
+    // Waits for an in-flight cancel signal to finish before reading the outcome.
+    private async Task<bool> IsCancelled()
+    {
+        await Workflow.WaitConditionAsync(() => !_cancellationInProgress);
+        return _orderCancelled;
     }
 
     public async Task WaitForCollection()

@@ -73,6 +73,11 @@ public static class Endpoints
         
         var kitchenRequest = await kitchenRequestRepository.Retrieve(orderIdentifier);
 
+        if (kitchenRequest.OrderState == OrderState.CANCELLED)
+        {
+            return new KitchenRequestDto(kitchenRequest);
+        }
+
         kitchenRequest.Preparing();
 
         await kitchenRequestRepository.Update(kitchenRequest, [new OrderPreparingEventV1()

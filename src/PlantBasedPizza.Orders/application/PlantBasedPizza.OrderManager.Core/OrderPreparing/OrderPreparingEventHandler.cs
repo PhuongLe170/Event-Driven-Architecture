@@ -26,7 +26,7 @@ namespace PlantBasedPizza.OrderManager.Core.OrderPreparing
             
             var order = await _orderRepository.Retrieve(evt.OrderIdentifier);
 
-            order.AddHistory("Order prep started");
+            order.KitchenStarted();
 
             await _orderRepository.Update(order);
             await _userNotificationService.NotifyOrderPreparing(order.CustomerIdentifier, order.OrderIdentifier);

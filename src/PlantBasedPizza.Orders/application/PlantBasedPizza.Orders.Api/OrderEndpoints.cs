@@ -143,22 +143,30 @@ public static class OrderEndpoints
         [FromServices] CancelOrderCommandHandler handler,
         [FromServices] IFeatures features,
         [FromServices] IWorkflowEngine workflowEngine,
+        [FromServices] IPaymentService paymentService,
         [FromBody] CancelOrderCommand command)
     {
         var accountId = httpContext.User.Claims.ExtractAccountId();
+        command.OrderIdentifier = orderIdentifier;
 
         try
         {
             if (features.UseOrchestrator())
             {
-                await workflowEngine.CancelOrder(command.OrderIdentifier);
+                // The workflow runs the cancellation and any refund itself.
+                await workflowEngine.CancelOrder(orderIdentifier);
                 return Results.Ok();
             }
 
             var result = await handler.Handle(command);
 
             if (result.CancelSuccess)
+            {
+                if (result.RefundRequired)
+                    await paymentService.RefundPayment(orderIdentifier, result.RefundAmount);
+
                 return Results.Ok();
+            }
 
             return Results.BadRequest();
         }

@@ -71,5 +71,27 @@ namespace PlantBasedPizza.UnitTest
 
             request.QualityCheckCompleteOn.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(5));
         }
+
+        [Fact]
+        public void CanCancelNewRequest_ShouldBeCancelledAndNotPrepared()
+        {
+            var request = new KitchenRequestBuilder().AddRecipe("Pizza").Build();
+
+            request.Cancel().Should().BeTrue();
+            request.Preparing();
+
+            request.OrderState.Should().Be(OrderState.CANCELLED);
+        }
+
+        [Fact]
+        public void CanCancelRequestAlreadyPreparing_ShouldNotCancel()
+        {
+            var request = new KitchenRequestBuilder().AddRecipe("Pizza").Build();
+
+            request.Preparing();
+
+            request.Cancel().Should().BeFalse();
+            request.OrderState.Should().Be(OrderState.PREPARING);
+        }
     }
 }

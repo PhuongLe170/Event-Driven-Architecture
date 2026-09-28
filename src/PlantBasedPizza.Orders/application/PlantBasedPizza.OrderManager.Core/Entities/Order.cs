@@ -95,6 +95,9 @@ namespace PlantBasedPizza.OrderManager.Core.Entities
         [JsonPropertyName("orderCancelledOn")]
         public DateTime? OrderCancelledOn { get; private set; }
 
+        [JsonPropertyName("kitchenStartedOn")]
+        public DateTime? KitchenStartedOn { get; private set; }
+
         [JsonIgnore]
         public IReadOnlyCollection<OrderItem> Items => _items;
         
@@ -264,13 +267,26 @@ namespace PlantBasedPizza.OrderManager.Core.Entities
             AddHistory("Order awaiting collection");
         }
 
+        public void KitchenStarted()
+        {
+            KitchenStartedOn ??= DateTime.Now;
+
+            AddHistory("Order prep started");
+        }
+
+        // An order can be cancelled up until the kitchen starts preparing it.
         public bool CancelOrder()
         {
-            if (OrderSubmittedOn.HasValue)
+            if (KitchenStartedOn.HasValue || OrderCompletedOn.HasValue)
             {
                 return false;
             }
-            
+
+            if (OrderCancelledOn.HasValue)
+            {
+                return true;
+            }
+
             AddHistory("Order cancelled");
             OrderCancelledOn = DateTime.Now;
             

@@ -4,6 +4,7 @@ using Dapr;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PlantBasedPizza.Events;
+using PlantBasedPizza.Kitchen.Core.OrderCancelled;
 using PlantBasedPizza.Kitchen.Core.OrderConfirmed;
 using PlantBasedPizza.Kitchen.Infrastructure;
 
@@ -37,6 +38,36 @@ public static class EventHandlers
         {
             Activity.Current?.AddException(ex);
             
+            return Results.InternalServerError();
+        }
+    }
+
+    [Topic("public", "order.orderCancelled.v1",
+        DeadLetterTopic = "kitchen.failedMessages")]
+    public static async Task<IResult> HandleOrderCancelledEvent([FromServices] OrderCancelledEventHandler handler,
+        [FromServices] Idempotency idempotency,
+        HttpContext httpContext,
+        OrderCancelledEventV1 evt)
+    {
+        try
+        {
+            var eventId = httpContext.ExtractEventId();
+
+            if (await idempotency.HasEventBeenProcessedWithId(eventId))
+            {
+                return Results.Ok();
+            }
+
+            await handler.Handle(evt);
+
+            await idempotency.ProcessedSuccessfully(eventId);
+
+            return Results.Ok();
+        }
+        catch (Exception ex)
+        {
+            Activity.Current?.AddException(ex);
+
             return Results.InternalServerError();
         }
     }

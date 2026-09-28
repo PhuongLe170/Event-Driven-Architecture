@@ -40,10 +40,19 @@ function OrderDetail(props) {
   }, []);
 
   async function cancelOrder(order) {
-    await ordersApi.post(`/${order.orderIdentifier}/cancel`, {
-      orderIdentifier: order.orderIdentifier,
-    });
-    setSnackbarContents('Cancellation requested');
+    try {
+      await ordersApi.post(`/${order.orderIdentifier}/cancel`, {
+        orderIdentifier: order.orderIdentifier,
+      });
+      setSnackbarContents('Cancellation requested');
+    } catch (error) {
+      console.error("Error cancelling the order:", error);
+      setSnackbarContents(
+        error.response?.status === 400
+          ? "Unfortunately, the kitchen has already started your order and it cannot be cancelled"
+          : "Sorry, we couldn't cancel your order. Please try again."
+      );
+    }
     setSnackbarOpen(true);
   }
 

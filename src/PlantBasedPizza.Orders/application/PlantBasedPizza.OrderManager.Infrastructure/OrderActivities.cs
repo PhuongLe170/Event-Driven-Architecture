@@ -51,12 +51,14 @@ public class OrderActivities(SubmitOrderCommandHandler submitOrderHandler,
     }
 
     [Activity]
-    public async Task CancelOrder(string orderIdentifier)
+    public async Task<bool> CancelOrder(string orderIdentifier)
     {
-        await cancelOrderHandler.Handle(new CancelOrderCommand()
+        var result = await cancelOrderHandler.Handle(new CancelOrderCommand()
         {
             OrderIdentifier = orderIdentifier
         });
+
+        return result.CancelSuccess;
     }
 
     [Activity]

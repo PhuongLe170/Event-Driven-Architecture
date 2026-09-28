@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using PlantBasedPizza.Kitchen.Api;
+using PlantBasedPizza.Kitchen.Core.OrderCancelled;
 using PlantBasedPizza.Kitchen.Core.OrderConfirmed;
 using PlantBasedPizza.Kitchen.Infrastructure;
 using PlantBasedPizza.Shared;
@@ -24,7 +25,7 @@ builder.Services.AddSharedInfrastructure(builder.Configuration, applicationName)
     .AddMongoDb(builder.Configuration["DatabaseConnection"]);
 
 builder.Services.AddAsyncApiDocs(builder.Configuration,
-    [typeof(KitchenEventPublisher), typeof(OrderConfirmedEventHandler)], "KitchenService");
+    [typeof(KitchenEventPublisher), typeof(OrderConfirmedEventHandler), typeof(OrderCancelledEventHandler)], "KitchenService");
 
 builder.Services.AddAuthentication(options =>
 {

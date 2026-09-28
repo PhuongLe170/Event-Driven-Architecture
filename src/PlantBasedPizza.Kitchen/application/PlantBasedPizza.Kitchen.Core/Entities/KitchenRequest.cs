@@ -49,7 +49,25 @@ namespace PlantBasedPizza.Kitchen.Core.Entities
 
         public void Preparing(string correlationId = "")
         {
+            if (OrderState == OrderState.CANCELLED)
+            {
+                return;
+            }
+
             OrderState = OrderState.PREPARING;
+        }
+
+        // Only an order the kitchen hasn't started yet can be dropped.
+        public bool Cancel()
+        {
+            if (OrderState != OrderState.NEW)
+            {
+                return OrderState == OrderState.CANCELLED;
+            }
+
+            OrderState = OrderState.CANCELLED;
+
+            return true;
         }
 
         public void PrepComplete(string correlationId = "")

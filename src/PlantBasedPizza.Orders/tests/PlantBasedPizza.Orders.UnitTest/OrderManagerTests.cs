@@ -173,6 +173,62 @@ public class OrderManagerTests
     
     
     [Fact]
+    public void CancelSubmittedOrderBeforeKitchenStarts_ShouldCancel()
+    {
+        var order = Order.Create(OrderType.Pickup, DefaultCustomerIdentifier);
+        order.AddOrderItem("PIZZA1", "Pizza 1", 1, 10);
+        order.SubmitOrder();
+        order.Confirm(10);
+
+        var result = order.CancelOrder();
+
+        result.Should().BeTrue();
+        order.OrderCancelledOn.Should().NotBeNull();
+        order.Events.Should().Contain(evt => evt.EventName == "order.orderCancelled");
+    }
+
+    [Fact]
+    public void CancelOrderAfterKitchenStarted_ShouldNotCancel()
+    {
+        var order = Order.Create(OrderType.Pickup, DefaultCustomerIdentifier);
+        order.AddOrderItem("PIZZA1", "Pizza 1", 1, 10);
+        order.SubmitOrder();
+        order.Confirm(10);
+        order.KitchenStarted();
+
+        var result = order.CancelOrder();
+
+        result.Should().BeFalse();
+        order.OrderCancelledOn.Should().BeNull();
+        order.Events.Should().NotContain(evt => evt.EventName == "order.orderCancelled");
+    }
+
+    [Fact]
+    public void CancelCompletedOrder_ShouldNotCancel()
+    {
+        var order = Order.Create(OrderType.Pickup, DefaultCustomerIdentifier);
+        order.AddOrderItem("PIZZA1", "Pizza 1", 1, 10);
+        order.SubmitOrder();
+        order.CompleteOrder();
+
+        order.CancelOrder().Should().BeFalse();
+        order.OrderCancelledOn.Should().BeNull();
+    }
+
+    [Fact]
+    public void CancelledOrder_ShouldNotBeConfirmed()
+    {
+        var order = Order.Create(OrderType.Pickup, DefaultCustomerIdentifier);
+        order.AddOrderItem("PIZZA1", "Pizza 1", 1, 10);
+        order.SubmitOrder();
+
+        order.CancelOrder().Should().BeTrue();
+        order.Confirm(10);
+
+        order.History().Should().NotContain(h => h.Description == "Order confirmed");
+    }
+
+    [Fact]
     public void CanCreateNewOrderWithNoCustomerIdentifier_ShouldError()
     {
         Assert.Throws<ArgumentNullException>(() =>

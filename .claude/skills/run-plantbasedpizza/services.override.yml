@@ -4,3 +4,11 @@ services:
   frontend:
     environment:
       - BROWSER=none
+  # Orders flow via Temporal OrderProcessingWorkflow instead of pure Dapr choreography.
+  # Remove these two blocks (or set false) to go back to choreography.
+  local.order-api:
+    environment:
+      - Features__UseOrchestrator=true
+  local.orders-worker:
+    environment:
+      - Features__UseOrchestrator=true

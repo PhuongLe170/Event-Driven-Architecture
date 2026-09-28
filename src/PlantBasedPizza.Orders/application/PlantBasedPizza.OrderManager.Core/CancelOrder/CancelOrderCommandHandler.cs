@@ -9,6 +9,14 @@ public class CancelOrderCommandHandler(IOrderRepository orderRepository, IUserNo
     {
         var order = await orderRepository.Retrieve(command.OrderIdentifier);
 
+        if (order.OrderCancelledOn.HasValue)
+        {
+            return new CancelOrderResult()
+            {
+                CancelSuccess = true,
+            };
+        }
+
         var cancelResult = order.CancelOrder();
 
         if (!cancelResult)
@@ -26,7 +34,9 @@ public class CancelOrderCommandHandler(IOrderRepository orderRepository, IUserNo
         
         return new CancelOrderResult()
         {
-            CancelSuccess = cancelResult
+            CancelSuccess = cancelResult,
+            RefundRequired = order.OrderSubmittedOn.HasValue,
+            RefundAmount = order.TotalPrice,
         };
     }
 }
